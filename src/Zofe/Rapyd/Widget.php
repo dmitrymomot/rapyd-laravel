@@ -133,8 +133,22 @@ class Widget
      */
     public function attributes($attributes)
     {
+        if (is_array($this->attributes) and is_array($attributes))
+        {
+            $attributes = array_merge($this->attributes, $attributes);
+        }
         $this->attributes = $attributes;
         return $this;
+    }
+
+    /**
+     * shortcut for attributes()
+     * @param $attributes
+     * @return $this
+     */
+    public function attr($attributes)
+    {
+        return $this->attributes($attributes);
     }
 
     /**

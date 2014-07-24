@@ -41,7 +41,8 @@ abstract class Field extends Widget
     public $apply_rules = true;
     public $required = false;
     //data settings
-    public $model; 
+    public $model;
+    public $model_relations;
     public $insert_value = null; 
     public $update_value = null; 
     public $show_value = null; //default value in visualization
@@ -73,17 +74,23 @@ abstract class Field extends Widget
     
     public $star = '';
 
-    public function __construct($name, $label, &$model = null)
+    public function __construct($name, $label, &$model = null, &$model_relations = null)
     {
         parent::__construct();
 
         $this->model = $model;
+        $this->model_relations = $model_relations;
 
-        $this->name($name);
+        $this->setName($name);
         $this->label = $label;
     }
 
-    public function name($name)
+
+    /**
+     * check for relation notation and split relation-name and fiel-dname
+     * @param $name
+     */
+    protected function setName($name)
     {
         //detect relation or relation.field
         $relation = null;
@@ -183,13 +190,6 @@ abstract class Field extends Widget
         return $this;
     }
 
-    public function attributes($attributes)
-    {
-
-        $this->attributes = $attributes;
-        return $this;
-    }
-
     public function insertValue($insert_value)
     {
         $this->insert_value = $insert_value;
@@ -214,6 +214,12 @@ abstract class Field extends Widget
         return $this;
     }
 
+    public function placeholder($placeholder)
+    {
+        $this->attributes['placeholder'] = $placeholder;
+        return $this;
+    }
+    
     public function getValue()
     {
         $name = $this->db_name;
@@ -274,8 +280,8 @@ abstract class Field extends Widget
 
                 //es. "article_detail" per "article"
                 case 'Illuminate\Database\Eloquent\Relations\HasOne':
-                    $this->value = $this->relation->$name; //value I need is the field value on related table
-                    // @$this->model->$relation->$name;
+                    $this->value = @$this->relation->get()->first()->$name; //value I need is the field value on related table
+//                     @$this->model->$relation->$name;
 
                     break;
 
@@ -419,7 +425,10 @@ abstract class Field extends Widget
 
         if (is_object($this->model) && isset($this->db_name)) {
 
-            if (!Schema::hasColumn($this->model->getTable(), $this->db_name)) {
+            if (
+                !Schema::hasColumn($this->model->getTable(), $this->db_name)
+                || is_a($this->relation, 'Illuminate\Database\Eloquent\Relations\HasOne') 
+                ) {
                 $this->model->saved(function () {
                     $this->updateRelations();
                 });
@@ -449,9 +458,8 @@ abstract class Field extends Widget
         } else {
             $data = $this->value;
         }
-
         if ($this->relation != null) {
-
+            
             $methodClass = get_class($this->relation);
             switch ($methodClass) {
                 case 'Illuminate\Database\Eloquent\Relations\BelongsToMany':
@@ -464,6 +472,15 @@ abstract class Field extends Widget
                     break;
                 case 'Illuminate\Database\Eloquent\Relations\HasOne':
 
+                    if (isset($this->model_relations[$this->rel_name])) {
+                        $relation = $this->model_relations[$this->rel_name];
+                    } else {
+                        $relation = $this->relation->get()->first();
+                        if (!$relation) $relation = $this->relation->getRelated();
+                        $this->model_relations[$this->rel_name] = $relation;
+                    }
+                    $relation->{$this->rel_field} = $data;
+                    $this->relation->save( $relation );
                     break;
                 case 'Illuminate\Database\Eloquent\Relations\HasOneOrMany':
 
@@ -509,7 +526,7 @@ abstract class Field extends Widget
         }
         $this->message = implode("<br />\n", $this->messages);
         
-        $attributes = array('onchange', 'type', 'size', 'style', 'class', 'rows', 'cols');
+        $attributes = array('onchange', 'type', 'size', 'style', 'class', 'rows', 'cols', 'placeholder');
 
         foreach ($attributes as $attribute) {
             if (isset($this->$attribute))

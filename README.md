@@ -213,6 +213,7 @@ datagrid supports also csv output, so it can be used as "report" tool.
 | $form->message                 | show if present a succes/confirmation message               |
 | $form->fields                  | array of fields  (to do a @foreach)                         |
 | $form->field('fieldname')      | field instance, used without property it show field output  |
+| $form->error                   | error string containing all errors                          |
 | ..field('fieldname')->messages | array of error messages for current field                   |
 | ..field('fieldname')->message  | string with all error messages for current field            |
 |                                |                                                             |
@@ -238,7 +239,7 @@ datagrid supports also csv output, so it can be used as "report" tool.
 ```php
    //simple crud for Article entity
    $edit = DataEdit::source(new Article);
-   $edit->link("article/list","Articles", "TR")->back('update|do_delete');
+   $edit->link("article/list","Articles", "TR")->back();
    $edit->add('title','Title', 'text')->rule('required');
    $edit->add('body','Body','textarea')->rule('required');
    $edit->add('download','Attachment', 'file')->rule('mime:pdf')->move('uploads/pdf/');
@@ -253,7 +254,8 @@ datagrid supports also csv output, so it can be used as "report" tool.
    #crud.blade.php
   {{ $edit }}
 ```
-As you see you can append fields and links, while the "buttons" (save, undo, delete, etc..) are fully managed by dataedit
+As you see you can append fields and links, while the "buttons" (save, undo, delete, etc..) and messages (like delete confirmation) are fully managed by dataedit.  
+You can add a ```->back()``` or more specific ```->back('do_delete|update')``` to a link if you want to auto-pull back  after all actions (or after some of these).
 
 note: we use _$edit->view_  method  instead _View::make_ for a reason: DataEdit must manage  redirects. With other widgets you should use View facade as default.    
 
